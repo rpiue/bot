@@ -231,7 +231,7 @@
             const qrCodeElement = document.getElementById('qr-code');
             qrCodeElement.innerHTML = '';
             const img = document.createElement('img');
-            
+
             img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.qrImage)}&size=250x250`;
             qrCodeElement.appendChild(img);
             console.log('img', img);
@@ -246,6 +246,15 @@
             qrCodeElementMode.innerHTML = '<p id="qr-code-mode" style="color: #00ff00; font-family: Courier New, Courier, monospace; font-size: large;"><b>BOT ACTIVADO</b></p>';
 
         });
+
+        socket.on("alert", (message) => {
+            alert(message);
+        });
+
+        function showAlert(message, type) {
+            const alertsContainer = document.getElementById("alerts");
+            alertsContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
 
         socket.on("initialData", (data) => {
             var status = data.sessionActive;
@@ -270,6 +279,56 @@
                 });
             }
         });
+        
+
+        document.getElementById('setImageUrl').addEventListener('click', function () {
+            const url = document.getElementById('imageUrl').value; // Obtener la URL del campo de entrada
+
+            if (url) {
+                socket.emit('setImageUrl', url); // Emitir el evento para iniciar desde el primer número
+            } else {
+                alert("Por favor, ingrese la URL del archivo .txt.");
+            }
+        });
+
+        document.getElementById('toggleEnvio').addEventListener('click', function () {
+            // Obtener la URL del campo de entrada
+
+            if (url) {
+                socket.emit('toggleEnvio'); // Emitir el evento para iniciar desde el primer número
+            } else {
+                alert("Por favor, ingrese la URL del archivo .txt.");
+            }
+        });
+
+        document.getElementById('startFromZero').addEventListener('click', function () {
+            const url = document.getElementById('url').value; // Obtener la URL del campo de entrada
+            const urliMG = document.getElementById('urliMG').value;
+
+            if (url) {
+                socket.emit('empezar-de-cero', url, urliMG); // Emitir el evento para iniciar desde el primer número
+            } else {
+                alert("Por favor, ingrese la URL del archivo .txt.");
+            }
+        });
+
+
+        document.getElementById('iniciar-envio').onclick = function () {
+            const numero = document.getElementById('numero-para-continuar').value.trim();
+            const url = document.getElementById('url').value;
+            const urliMG = document.getElementById('urliMG').value;
+            if (numero) {
+                socket.emit('iniciar-envio', url, numero, urliMG); // Enviar número y lista al servidor
+                envioActivo = true;
+            } else {
+                alert('Por favor, ingresa un número válido.');
+            }
+        };
+        document.getElementById('detener-envio').onclick = function () {
+            socket.emit('detener-envio'); // Enviar evento para detener el envío
+            envioActivo = false;
+        };
+
 
         socket.on("messageSent", (msg) => {
             messageCount++;
