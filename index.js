@@ -3,7 +3,8 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const axios = require("axios");
-const QRCode = require("qrcode"); // Importar la biblioteca qrcode
+const qrcode = require("qrcode-terminal");
+
 
 const client = new Client();
 const app = express();
@@ -18,6 +19,12 @@ app.get("/", (req, res) => {
 let qrImage;
 let sessionActive = false;
 
+client.on("qr", (qr) => {
+    qrcode.generate(qr, { small: true }); // Mostrar QR en la terminal
+    io.emit("qr", qr); // Emitir el QR al cliente web
+    qrImage = qr
+  });
+
 //client.on("qr", async (qr) => {
 //  try {
 //    // Generar el código QR como una imagen en formato base64
@@ -30,17 +37,17 @@ let sessionActive = false;
 //  }
 //});
 
-client.on("qr", (qr) => {
-    QRCode.toDataURL(qr, { errorCorrectionLevel: 'H' })
-      .then(async (url) => {
-        qrImage = await QRCode.toDataURL(qr);
-        io.emit("qr", url);
-        sessionActive = false;
-      })
-      .catch((error) => {
-        console.error("Error generando QR:", error);
-      });
-  });
+//client.on("qr", (qr) => {
+//    QRCode.toDataURL(qr, { errorCorrectionLevel: 'H' })
+//      .then(async (url) => {
+//        qrImage = await QRCode.toDataURL(qr);
+//        io.emit("qr", url);
+//        sessionActive = false;
+//      })
+//      .catch((error) => {
+//        console.error("Error generando QR:", error);
+//      });
+//  });
 
 client.on("ready", () => {
   console.log("Cliente listo para enviar mensajes.");
