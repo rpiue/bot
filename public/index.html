@@ -1,31 +1,277 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enviar Imagen y Mensaje</title>
+    <title>Escanear QR</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        header {
+            background-color: #25D366;
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            color: #0b2e00;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        header img {
+            height: 40px;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        #qr-code {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #qr-code img {
+            border: 3px solid #25D366;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        #message-counter {
+            margin: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .form-container,
+        .settings-container {
+            background-color: #1f1f1f;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        #terminal {
+            background-color: #222;
+            color: #00ff00;
+            width: 600px;
+            min-height: 300px;
+            max-width: 100%;
+            max-height: 800px;
+            overflow-y: auto;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            padding: 10px;
+            width: 100%;
+            max-width: 350px;
+            border: none;
+            border-radius: 5px;
+            margin: 5px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            font-size: 16px;
+            background-color: #2a2a2a;
+            color: #ffffff;
+        }
+
+        button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #25D366;
+            color: #0b2e00;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        button:hover {
+            background-color: #20b358;
+            transform: translateY(-2px);
+        }
+
+        footer {
+            background-color: #25D366;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            color: #0b2e00;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        footer p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        #qr-code-mode {
+            color: #fa0000;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
+
 <body>
-    <h1>Escanea el QR para iniciar sesión en WhatsApp</h1>
-    <img id="qrImage" alt="QR Code" />
-    <form action="/send-message" method="POST">
-        <label for="imageUrl">URL de la imagen:</label>
-        <input type="text" id="imageUrl" name="imageUrl" required><br><br>
-        
-        <button type="submit">Enviar imagen</button>
-    </form>
+    <header>
+        <!-- Cambia esto por la ruta del logo -->
+        <h1><b>Escanear QR</b> </h1>
+    </header>
+
+    <h1 id="qr-code-mode"><b>BOT Apagado</b></h1>
+    <div id="form-container" style="display: none;">
+
+
+        <div class="row">
+            <div class="col">
+                <div class="form-container">
+                    <div class="mb-2">
+                        <h3 class="card-title">Mensajes Enviados: <span id="sent-count">0</span>
+                        </h3>
+                    </div>
+                    <label for="urliMG" class="">URL de la imagen:</label>
+                    <input type="text" id="urliMG" placeholder="Ingresa la URL de la imagen" />
+
+                    <label for="url">URL del archivo .txt:</label>
+                    <input type="text" id="url" required placeholder="Ingresa la URL del archivo .txt" />
+
+                    <label for="numero-para-continuar">Número para continuar:</label>
+                    <input type="text" id="numero-para-continuar" placeholder="Ingrese el número para continuar" />
+
+                    <div class="button-group m-2">
+                        <button id="iniciar-envio">Iniciar Envío</button>
+                        <button id="startFromZero">Iniciar Envío 0</button>
+                        <button id="detener-envio">Detener Envío</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col">
+                <div class="form-container">
+                    <h3>Configuraciones</h3>
+                    <label for="imageUrl">URL de la imagen:</label>
+                    <input type="text" id="imageUrl" placeholder="Ingresa la URL de la imagen" />
+
+                    <div class="button-group">
+                        <button id="setImageUrl">Establecer URL de la Imagen</button>
+                        <button id="toggleEnvio">Activar/Desactivar Envío</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="terminal">
+        <h1>Escanea el código QR</h1>
+        <div id="qr-code">
+            <img id="qr-image" src="" alt="Código QR" />
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2024 CodexPE. Todos los derechos reservados.</p>
+        <p>Síguenos en <a href="https://www.instagram.com/yape.fake/" style="color: #0b2e00;">Instagram</a></p>
+    </footer>
 
     <script>
-        // JavaScript para mostrar dinámicamente el QR
-        fetch('/get-qr')
-            .then(response => response.json())
-            .then(data => {
-                const qrImage = document.getElementById('qrImage');
-                qrImage.src = data.qrCodeUrl;
-            })
-            .catch(error => {
-                console.error('Error al obtener el QR:', error);
+        const socket = io();
+        let messageCount = 0;
+
+        window.onload = () => {
+            solicitarDatos();
+        };
+
+        function solicitarDatos() {
+            socket.on("connect", () => {
+                socket.emit("requestData");
             });
+        }
+
+        socket.on("qr", (qr) => {
+            document.getElementById("qr-image").src = qr;
+        });
+
+        socket.on('ready', () => {
+            const qrCodeElementMode = document.getElementById('qr-code-mode');
+            const formu = document.querySelector('.form-container');
+            formu.style.display = 'block';
+            qrCodeElementMode.innerHTML = '<b>BOT ACTIVADO</b>';
+        });
+
+        socket.on("initialData", (data) => {
+            var status = data.sessionActive;
+            if (!status) {
+                const qrImageElement = document.getElementById("qr-image");
+                qrImageElement.src = data.qrImage;
+            } else {
+                const qrCodeElementMode = document.getElementById('qr-code-mode');
+                const formu = document.getElementById('form-container');
+                formu.style.display = 'block';
+                qrCodeElementMode.innerHTML = '<b>BOT ACTIVADO</b>';
+
+                const sentMessagesDiv = document.getElementById("terminal");
+                sentMessagesDiv.innerHTML = ""; // Limpiar el contenido anterior
+                data.mensajesEnviados.forEach((mensaje) => {
+                    const messageElement = document.createElement("div");
+                    messageElement.textContent = mensaje;
+                    sentMessagesDiv.appendChild(messageElement);
+                });
+            }
+        });
+
+        socket.on("messageSent", (msg) => {
+            messageCount++;
+            document.getElementById("sent-count").innerText = messageCount;
+            const sentMessagesDiv = document.getElementById("terminal");
+            const messageElement = document.createElement("div");
+            messageElement.textContent = msg;
+            sentMessagesDiv.appendChild(messageElement);
+            sentMessagesDiv.scrollTop = sentMessagesDiv.scrollHeight; // Desplazarse hacia abajo
+        });
     </script>
 </body>
+
 </html>
