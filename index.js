@@ -1,4 +1,4 @@
-const { Client, MessageMedia } = require("whatsapp-web.js");
+const { Client, MessageMedia, LocalAuth } = require("whatsapp-web.js");
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
@@ -6,7 +6,10 @@ const axios = require("axios");
 const qrcode = require("qrcode-terminal");
 
 
-const client = new Client();
+const client = new Client({
+  authStrategy: new LocalAuth({ clientId: "client-one" }) // Usar LocalAuth para guardar automáticamente la sesión
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -135,8 +138,8 @@ function encontrarPosicion(contactos, numeroEspecifico) {
 client.on("message", async (msg) => {
   const chat = await msg.getChat();
 
-  const planRegex = /Plan (Básico|Medium|Premium) - Yape Fake/i;
-  if (planRegex.test(msg.body) && !chat.isGroup && envioActivoR) {
+  const planRegex = /Plan (Basico|Medium|Premium) - Yape Fake/i;
+  if (planRegex.test(msg.body) && !chat.isGroup) {
     const lines = msg.body.split("\n");
     const nameLine = lines.find((line) => line.startsWith("Mi nombre es:"));
     const planLine = lines.find((line) => line.startsWith("El Plan:"));
@@ -188,11 +191,13 @@ io.on("connection", (socket) => {
   socket.on("setImageUrl", (url) => {
     imageUrl = url; // Establecer la URL de la imagen
     console.log(`URL de la imagen establecida: ${imageUrl}`);
+    socket.emit("alert", "Imagen establecida correctamente.");
   });
 
   socket.on("toggleEnvio", () => {
-    envioActivoR = !envioActivoR;
-    console.log(`Envio activo: ${envioActivoR}`);
+    envioActivo = !envioActivo;
+    const estadoEnvio = envioActivo ? "activado" : "desactivado";
+    socket.emit("alert", `El envío de mensajes ha sido ${estadoEnvio}.`);
   });
 
   socket.on("iniciar-envio", (url, numeroParaContinuar, img) => {
