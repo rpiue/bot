@@ -158,7 +158,6 @@
 
 <body>
     <header>
-        <!-- Cambia esto por la ruta del logo -->
         <h1><b>Escanear QR</b> </h1>
     </header>
 
@@ -206,9 +205,7 @@
     </div>
     <div id="terminal">
         <h1>Escanea el código QR</h1>
-        <div id="qr-code">
-            <img id="qr-image" src="" alt="Código QR" />
-        </div>
+        <div id="qr-code"></div>
     </div>
 
     <footer>
@@ -231,11 +228,13 @@
         }
 
         socket.on("qr", (qr) => {
-            const img = document.createElement('qr-image');
-            img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qr)}&size=250x250`;
+            const qrCodeElement = document.getElementById('qr-code');
+            qrCodeElement.innerHTML = '';
+            const img = document.createElement('img');
+            
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.qrImage)}&size=250x250`;
+            qrCodeElement.appendChild(img);
             console.log('img', img);
-
-
         });
 
         socket.on('ready', () => {
@@ -251,10 +250,11 @@
         socket.on("initialData", (data) => {
             var status = data.sessionActive;
             if (!status) {
-                const img = document.createElement('qr-image');
+                const qrCodeElement = document.getElementById('qr-code');
+                qrCodeElement.innerHTML = '';
+                const img = document.createElement('img');
                 img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.qrImage)}&size=250x250`;
-            console.log('img', img);
-                
+                qrCodeElement.appendChild(img);
             } else {
                 const qrCodeElementMode = document.getElementById('qr-code-mode');
                 const formu = document.getElementById('form-container');
