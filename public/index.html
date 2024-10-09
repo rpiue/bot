@@ -158,7 +158,7 @@
 
 <body>
     <header>
-        <!-- Cambia esto por la ruta del logo -->
+        <img src="logo.png" alt="Logo de WhatsApp"> <!-- Cambia esto por la ruta del logo -->
         <h1><b>Escanear QR</b> </h1>
     </header>
 
@@ -231,24 +231,27 @@
         }
 
         socket.on("qr", (qr) => {
-            document.getElementById("qr-image").src = qr;
+            const img = document.createElement('qr-image');
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qr)}&size=250x250`;
+
         });
 
         socket.on('ready', () => {
             const qrCodeElementMode = document.getElementById('qr-code-mode');
-            const formu = document.getElementById('formulario');
+            const formu = document.getElementById('form-container');
             formu.style.display = 'block';
             const qrCodeElement = document.getElementById('terminal');
             qrCodeElement.innerHTML = '';
             qrCodeElementMode.innerHTML = '<p id="qr-code-mode" style="color: #00ff00; font-family: Courier New, Courier, monospace; font-size: large;"><b>BOT ACTIVADO</b></p>';
-    
+
         });
 
         socket.on("initialData", (data) => {
             var status = data.sessionActive;
             if (!status) {
-                const qrImageElement = document.getElementById("qr-image");
-                qrImageElement.src = data.qrImage;
+                const img = document.createElement('qr-image');
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.qrImage)}&size=250x250`;
+
             } else {
                 const qrCodeElementMode = document.getElementById('qr-code-mode');
                 const formu = document.getElementById('form-container');
