@@ -236,9 +236,12 @@
 
         socket.on('ready', () => {
             const qrCodeElementMode = document.getElementById('qr-code-mode');
-            const formu = document.querySelector('.form-container');
+            const formu = document.getElementById('formulario');
             formu.style.display = 'block';
-            qrCodeElementMode.innerHTML = '<b>BOT ACTIVADO</b>';
+            const qrCodeElement = document.getElementById('terminal');
+            qrCodeElement.innerHTML = '';
+            qrCodeElementMode.innerHTML = '<p id="qr-code-mode" style="color: #00ff00; font-family: Courier New, Courier, monospace; font-size: large;"><b>BOT ACTIVADO</b></p>';
+    
         });
 
         socket.on("initialData", (data) => {
