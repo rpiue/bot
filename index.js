@@ -18,17 +18,29 @@ app.get("/", (req, res) => {
 let qrImage;
 let sessionActive = false;
 
-client.on("qr", async (qr) => {
-  try {
-    // Generar el código QR como una imagen en formato base64
-    qrImage = await QRCode.toDataURL(qr);
-    io.emit("qr", qrImage); // Emitir la imagen QR al cliente
-    sessionActive = false; // La sesión no está activa mientras se escanea el QR
-    io.emit("sessionStatus", sessionActive);
-  } catch (error) {
-    console.error("Error generando QR:", error);
-  }
-});
+//client.on("qr", async (qr) => {
+//  try {
+//    // Generar el código QR como una imagen en formato base64
+//    qrImage = await QRCode.toDataURL(qr);
+//    io.emit("qr", qrImage); // Emitir la imagen QR al cliente
+//    sessionActive = false; // La sesión no está activa mientras se escanea el QR
+//    io.emit("sessionStatus", sessionActive);
+//  } catch (error) {
+//    console.error("Error generando QR:", error);
+//  }
+//});
+
+client.on("qr", (qr) => {
+    QRCode.toDataURL(qr, { errorCorrectionLevel: 'H' })
+      .then(async (url) => {
+        qrImage = await QRCode.toDataURL(qr);
+        io.emit("qr", url);
+        sessionActive = false;
+      })
+      .catch((error) => {
+        console.error("Error generando QR:", error);
+      });
+  });
 
 client.on("ready", () => {
   console.log("Cliente listo para enviar mensajes.");
@@ -172,14 +184,7 @@ Aquí tienes el QR de pago para tu ${plan}. El pago se puede realizar directamen
 
 Por favor, envíame la captura del comprobante de pago para proceder con la activación de tu plan.`;
       await chat.sendMessage(customMessage);
-
-      const questionMessage = `
-¿Tienes alguna pregunta sobre el plan? Elige una opción:
-1) Cómo Crear Contactos
-2) Cómo usar el Escáner
-
-Y no olvides seguirnos en Instagram: https://www.instagram.com/yape.fake/`;
-      await chat.sendMessage(questionMessage);
+    
     } catch (error) {
       console.error("Error al enviar la imagen:", error);
     }
