@@ -22,32 +22,10 @@ let sessionActive = false;
 client.on("qr", (qr) => {
     qrcode.generate(qr, { small: true }); // Mostrar QR en la terminal
     io.emit("qr", qr); // Emitir el QR al cliente web
+    sessionActive = false;
     qrImage = qr
+    
   });
-
-//client.on("qr", async (qr) => {
-//  try {
-//    // Generar el código QR como una imagen en formato base64
-//    qrImage = await QRCode.toDataURL(qr);
-//    io.emit("qr", qrImage); // Emitir la imagen QR al cliente
-//    sessionActive = false; // La sesión no está activa mientras se escanea el QR
-//    io.emit("sessionStatus", sessionActive);
-//  } catch (error) {
-//    console.error("Error generando QR:", error);
-//  }
-//});
-
-//client.on("qr", (qr) => {
-//    QRCode.toDataURL(qr, { errorCorrectionLevel: 'H' })
-//      .then(async (url) => {
-//        qrImage = await QRCode.toDataURL(qr);
-//        io.emit("qr", url);
-//        sessionActive = false;
-//      })
-//      .catch((error) => {
-//        console.error("Error generando QR:", error);
-//      });
-//  });
 
 client.on("ready", () => {
   console.log("Cliente listo para enviar mensajes.");
