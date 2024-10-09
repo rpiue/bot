@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enviar Imagen y Mensaje</title>
+</head>
+<body>
+    <h1>Escanea el QR para iniciar sesión en WhatsApp</h1>
+    <img id="qrImage" alt="QR Code" />
+    <form action="/send-message" method="POST">
+        <label for="imageUrl">URL de la imagen:</label>
+        <input type="text" id="imageUrl" name="imageUrl" required><br><br>
+        
+        <button type="submit">Enviar imagen</button>
+    </form>
+
+    <script>
+        // JavaScript para mostrar dinámicamente el QR
+        fetch('/get-qr')
+            .then(response => response.json())
+            .then(data => {
+                const qrImage = document.getElementById('qrImage');
+                qrImage.src = data.qrCodeUrl;
+            })
+            .catch(error => {
+                console.error('Error al obtener el QR:', error);
+            });
+    </script>
+</body>
+</html>
