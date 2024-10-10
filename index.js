@@ -254,7 +254,7 @@ _¡Gracias por confiar en nosotros!_`;
       } catch (error) {
         console.error("Error al enviar la imagen:", error);
       }
-    } else if (msg.body.toLowerCase().includes("reporte")) {
+    } else if (msg.body.toLowerCase().includes("reporte") && !chat.isGroup) {
       const lastReportTime = reportes.get(userNumber); // Obtiene la última hora de reporte
 
       // Verifica si puede enviar un nuevo reporte
