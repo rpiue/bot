@@ -18,6 +18,7 @@
             justify-content: center;
             padding: 20px;
             margin: 0;
+            width: 100%;
         }
 
         header {
@@ -86,12 +87,13 @@
             justify-content: center;
         }
 
+
         #terminal {
             background-color: #222;
             color: #00ff00;
             width: 600px;
             min-height: 300px;
-            max-width: 100%;
+            max-width: 80%;
             max-height: 800px;
             overflow-y: auto;
             border-radius: 5px;
@@ -158,7 +160,7 @@
 
 <body>
     <header>
-        <h1><b>Escanear QR</b> </h1>
+        <h1><b>Bot de WhatsApp</b> </h1>
     </header>
 
     <h1 id="qr-code-mode"><b>BOT Apagado</b></h1>
@@ -195,10 +197,16 @@
                     <label for="imageUrl">URL de la imagen:</label>
                     <input type="text" id="imageUrl" placeholder="Ingresa la URL de la imagen" />
 
-                    <div class="button-group">
-                        <button id="setImageUrl">Establecer URL de la Imagen</button>
-                        <button id="toggleEnvio">Activar/Desactivar Envío</button>
+                    <div class="button-group m-2">
+                        <button id="setImageUrl" class="p-2">Establecer URL de la Imagen</button>
+                        <button id="toggleEnvio" class="p-2">Activar</button>
                     </div>
+                </div>
+                <div class="form-container">
+                    <h2>Status Bot Grup <svg id="status" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill" viewBox="0 0 16 16">
+                        <circle cx="8" cy="8" r="8"/>
+                      </svg></h2>
+                    <button id="botGrup" type="button" class="btn btn-danger w-100 m-2"><b></b></button>
                 </div>
             </div>
         </div>
@@ -241,14 +249,35 @@
             const qrCodeElementMode = document.getElementById('qr-code-mode');
             const formu = document.getElementById('form-container');
             formu.style.display = 'block';
+            const btnD = document.getElementById('botGrup');
+            btnD.classList.remove('btn-danger');
+            btnD.classList.add('btn-success');
+            btnD.innerHTML = '<b>ACTIVAR</b>';
             const qrCodeElement = document.getElementById('terminal');
-            qrCodeElement.innerHTML = '';
+            qrCodeElement.innerHTML = '<h1>Esperando Trafico</h1>';
             qrCodeElementMode.innerHTML = '<p id="qr-code-mode" style="color: #00ff00; font-family: Courier New, Courier, monospace; font-size: large;"><b>BOT ACTIVADO</b></p>';
 
         });
 
         socket.on("alert", (message) => {
             alert(message);
+        });
+
+        socket.on("status", (statusBot) => {
+
+            const btnD = document.getElementById('botGrup');
+            const icon = document.getElementById('status');
+                if (statusBot) {
+                    icon.style.color = 'lime'
+                    btnD.classList.remove('btn-success');
+                    btnD.classList.add('btn-danger');
+                    btnD.innerHTML = '<b>DESACTIVAR</b>';
+                } else {
+                    icon.style.color = 'red'
+                    btnD.classList.remove('btn-danger');
+                    btnD.classList.add('btn-success');
+                    btnD.innerHTML = '<b>ACTIVAR</b>';
+                }
         });
 
         function showAlert(message, type) {
@@ -268,18 +297,36 @@
                 const qrCodeElementMode = document.getElementById('qr-code-mode');
                 const formu = document.getElementById('form-container');
                 formu.style.display = 'block';
-                qrCodeElementMode.innerHTML = '<b>BOT ACTIVADO</b>';
+                qrCodeElementMode.innerHTML = '<p id="qr-code-mode" style="color: #00ff00; font-family: Courier New, Courier, monospace; font-size: large;"><b>BOT ACTIVADO</b></p>';
+
 
                 const sentMessagesDiv = document.getElementById("terminal");
                 sentMessagesDiv.innerHTML = ""; // Limpiar el contenido anterior
+                sentMessagesDiv.innerHTML = '<h1>Esperando Trafico</h1>';
+                const btnD = document.getElementById('botGrup');
+            const icon = document.getElementById('status');
+                if (data.botGrup) {
+                    icon.style.color = 'lime'
+                    btnD.classList.remove('btn-success');
+                    btnD.classList.add('btn-danger');
+                    btnD.innerHTML = '<b>DESACTIVAR</b>';
+                } else {
+                    icon.style.color = 'red'
+                    btnD.classList.remove('btn-danger');
+                    btnD.classList.add('btn-success');
+                    btnD.innerHTML = '<b>ACTIVAR</b>';
+                }
                 data.mensajesEnviados.forEach((mensaje) => {
                     const messageElement = document.createElement("div");
-                    messageElement.textContent = mensaje;
+
+                    messageElement.innerHTML = `<span>${mensaje.fechaHora} - Mensaje enviado a ${mensaje.name} (${mensaje.userNumber})</span><br>`;
                     sentMessagesDiv.appendChild(messageElement);
                 });
+
+                console.log('Trae', data.mensajesEnviados)
             }
         });
-        
+
 
         document.getElementById('setImageUrl').addEventListener('click', function () {
             const url = document.getElementById('imageUrl').value; // Obtener la URL del campo de entrada
@@ -300,6 +347,16 @@
                 alert("Por favor, ingrese la URL del archivo .txt.");
             }
         });
+
+        document.getElementById('botGrup').addEventListener('click', function () {
+            // Obtener la URL del campo de entrada
+            if (url) {
+                socket.emit('setBotGrup'); // Emitir el evento para iniciar desde el primer número
+            } else {
+                alert("Por favor, ingrese la URL del archivo .txt.");
+            }
+        });
+
 
         document.getElementById('startFromZero').addEventListener('click', function () {
             const url = document.getElementById('url').value; // Obtener la URL del campo de entrada
@@ -330,12 +387,13 @@
         };
 
 
-        socket.on("messageSent", (msg) => {
+        socket.on("messageSent", (nombre, numero) => {
             messageCount++;
             document.getElementById("sent-count").innerText = messageCount;
             const sentMessagesDiv = document.getElementById("terminal");
             const messageElement = document.createElement("div");
-            messageElement.textContent = msg;
+            const timestamp = new Date().toLocaleTimeString();
+            messageElement.innerHTML = `<span>${timestamp} - Mensaje enviado a ${nombre} (${numero})</span><br>`;
             sentMessagesDiv.appendChild(messageElement);
             sentMessagesDiv.scrollTop = sentMessagesDiv.scrollHeight; // Desplazarse hacia abajo
         });
