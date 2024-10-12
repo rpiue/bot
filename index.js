@@ -1,4 +1,4 @@
-const { Client, MessageMedia, LocalAuth } = require("whatsapp-web.js");
+const { Client, MessageMedia } = require("whatsapp-web.js");
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
@@ -18,6 +18,29 @@ app.use(express.static("public"));
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
+
+app.post("/verificar", async (req, res) => {
+  const { codigo, numero, nombre } = req.body;
+
+  if (!codigo || !numero) {
+    return res.status(400).json({ error: "Código y número son requeridos." });
+  }
+
+  // Formatear el número de teléfono en el formato adecuado (sin espacios, sin '+', código internacional, etc.)
+  const formattedNumber = `${numero}@c.us`;
+
+  const message = `Hola ${nombre}, tu código es: ${codigo}`;
+
+  try {
+    // Enviar el mensaje usando el cliente de WhatsApp
+    await client.sendMessage(formattedNumber, message);
+    res.status(200).json({ success: `Mensaje enviado al número ${numero}` });
+  } catch (error) {
+    console.error("Error al enviar el mensaje:", error);
+    res.status(500).json({ error: "Hubo un error al enviar el mensaje" });
+  }
+});
+
 let qrImage;
 let sessionActive = false;
 
