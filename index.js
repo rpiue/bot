@@ -12,7 +12,7 @@ const client = new Client({
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-
+app.use(express.json());
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
@@ -22,22 +22,26 @@ app.get("/", (req, res) => {
 app.post("/verificar", async (req, res) => {
   const { codigo, numero, nombre } = req.body;
 
-  if (!codigo || !numero) {
-    return res.status(400).json({ error: "Código y número son requeridos." });
-  }
-
-  // Formatear el número de teléfono en el formato adecuado (sin espacios, sin '+', código internacional, etc.)
-  const formattedNumber = `${numero}@c.us`;
-
-  const message = `Hola ${nombre}, tu código es: ${codigo}`;
-
   try {
-    // Enviar el mensaje usando el cliente de WhatsApp
-    await client.sendMessage(formattedNumber, message);
-    res.status(200).json({ success: `Mensaje enviado al número ${numero}` });
+    if (!codigo || !numero) {
+      return res.status(400).send("Faltan parámetros: código o número.");
+    }
+
+    const mensaje = `Hola ${nombre}, tu código es *${codigo}*`;
+    const chatId = `51${numero}@c.us`;
+
+    // Enviar el mensaje usando whatsapp-web.js
+    client.sendMessage(chatId, mensaje).then(response => {
+      console.log("Mensaje enviado correctamente:", response);
+      return res.status(200).send("Mensaje enviado.");
+    }).catch(error => {
+      console.error("Error al enviar el mensaje:", error);
+      return res.status(500).send("Error al enviar el mensaje.");
+    });
+
   } catch (error) {
-    console.error("Error al enviar el mensaje:", error);
-    res.status(500).json({ error: "Hubo un error al enviar el mensaje" });
+    console.error("Error en el servidor:", error);
+    res.status(500).send("Error interno del servidor.");
   }
 });
 
