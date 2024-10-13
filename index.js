@@ -31,14 +31,16 @@ app.post("/verificar", async (req, res) => {
     const chatId = `51${numero}@c.us`;
 
     // Enviar el mensaje usando whatsapp-web.js
-    client.sendMessage(chatId, mensaje).then(response => {
-      console.log("Mensaje enviado correctamente:", response);
-      return res.status(200).send("Mensaje enviado.");
-    }).catch(error => {
-      console.error("Error al enviar el mensaje:", error);
-      return res.status(500).send("Error al enviar el mensaje.");
-    });
-
+    client
+      .sendMessage(chatId, mensaje)
+      .then((response) => {
+        console.log("Mensaje enviado correctamente:", response);
+        return res.status(200).send("Mensaje enviado.");
+      })
+      .catch((error) => {
+        console.error("Error al enviar el mensaje:", error);
+        return res.status(500).send("Error al enviar el mensaje.");
+      });
   } catch (error) {
     console.error("Error en el servidor:", error);
     res.status(500).send("Error interno del servidor.");
@@ -83,7 +85,7 @@ async function leerNumerosDesdeUrl(urlArchivo) {
     .filter((contacto) => contacto.numero);
 }
 
-async function enviarMensajes(url, numeroParaContinuar, imageUrl) {
+async function enviarMensajes(url, numeroParaContinuar, imageUrl, text) {
   const contactos = await leerNumerosDesdeUrl(url);
   console.log(contactos);
   const posicionInicio = encontrarPosicion(contactos, numeroParaContinuar) + 1;
@@ -99,7 +101,7 @@ async function enviarMensajes(url, numeroParaContinuar, imageUrl) {
     const { nombre, numero } = contactos[i];
     const numeroConCodigo = `51${numero}@c.us`;
 
-    const mensajePersonalizado = crearMensajePersonalizado(nombre);
+    const mensajePersonalizado = crearMensajePersonalizado(nombre, text);
 
     try {
       const contacto = await client.getContactById(numeroConCodigo);
@@ -119,7 +121,7 @@ async function enviarMensajes(url, numeroParaContinuar, imageUrl) {
       await client.sendMessage(numeroConCodigo, imagen);
       console.log(`Imagen enviada a ${nombre} (${numero})`);
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       await client.sendMessage(numeroConCodigo, mensajePersonalizado);
       console.log(`Mensaje enviado a ${nombre} (${numero})`);
@@ -131,7 +133,7 @@ async function enviarMensajes(url, numeroParaContinuar, imageUrl) {
       });
       io.emit("messageSent", nombre, numero);
 
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 6000));
     } catch (error) {
       console.error(`Error enviando a ${nombre} (${numero}):`, error);
     }
@@ -140,17 +142,8 @@ async function enviarMensajes(url, numeroParaContinuar, imageUrl) {
   console.log("Todos los mensajes han sido enviados.");
 }
 
-function crearMensajePersonalizado(nombre) {
-  return (
-    `¡Hola, ${nombre}! 👋 Soy CodexPE\n` +
-    `¿Qué pasó? ¿Por qué dejaste de usar la app Yape Fake? 😕\n\n` +
-    `¡Ya hay una nueva versión mejorada! 🚀\n\n` +
-    `Hemos implementado una tienda virtual 🛒 para que puedas comprar con seguridad y garantía. 🛡️\n\n` +
-    `*Importante:*\n\nEl *20 de octubre* habrá una eliminación de cuentas que no hayan actualizado la app. ⚠️\n\n` +
-    `No te pierdas de la app más realista y económica del mercado.\n\n *Instala la nueva versión aquí:* \n` +
-    `https://www.mediafire.com/file/676d35gs8ij0mrb/Yape-Fake.apk/file\n\n` +
-    `_¡Estamos seguros de que te encantará!_ ❤️`
-  );
+function crearMensajePersonalizado(nombre, texto) {
+  return `¡Hola, *${nombre}*! 👋 Soy *CodexPE*\n` + `${texto}`;
 }
 
 function encontrarPosicion(contactos, numeroEspecifico) {
@@ -159,6 +152,8 @@ function encontrarPosicion(contactos, numeroEspecifico) {
   );
 }
 const ultimosMensajes = {};
+let estadosUsuarios = {};
+
 const reportes = new Map();
 // Escuchar mensajes recibidos
 async function enviarMensajesBot(e) {
@@ -281,14 +276,114 @@ _¡Gracias por confiar en nosotros!_`;
       } catch (error) {
         console.error("Error al enviar la imagen:", error);
       }
-    } else if (msg.body.toLowerCase().includes("reporte") && !chat.isGroup) {
+    } else if (
+      msg.body.toLowerCase().includes("quiero el bot") &&
+      !chat.isGroup
+    ) {
+      // Guardamos al usuario en estado de selección de servicio
+      estadosUsuarios[userNumber] = { estado: "seleccionando" };
+
+      await msg.reply(`Elige uno de los servicios disponibles:
+  
+1. Solo el bot Doxing - *S/ 15* por un mes sin límites.
+2. Yape FAKE + Bot Doxing - *S/ 35* por un mes sin límites.
+  
+Responde con el número de la opción que prefieras.`);
+      return; // Nos aseguramos de no ejecutar más lógica para este mensaje
+    } else if (msg.body.toLowerCase().includes("info bot") && !chat.isGroup) {
+      // Guardamos al usuario en estado de selección de servicio
+      estadosUsuarios[userNumber] = { estado: "selecInfo" };
+
+      await msg.reply(`Elige una opción:
+  
+1.  ¿Qué es el Doxing?
+2.  ¿Para q sirve el Bot?
+  
+Responde con el número de la opción que prefieras.`);
+      return; // Nos aseguramos de no ejecutar más lógica para este mensaje
+    }
+    // Verificar si el usuario está en el estado de "seleccionando"
+    if (estadosUsuarios[userNumber]?.estado === "seleccionando") {
+      if (msg.body === "1") {
+        // Opción 1 seleccionada
+        await chat.sendMessage(`
+*¡Excelente!* Para asegurar tu cupo 
+*(👀 solo nos quedan 14)*, realiza el pago al siguiente *número de Yape:*
+  
+  📞 904339056 - OMAR SOTO
+
+En la descripción del pago escribe: 
+*"Bot vía CodexPE"*.
+  
+Una vez realizado el pago, envíanos una captura para confirmar.
+  
+*¡Gracias por tu confianza!*`);
+
+        // Cambiamos el estado del usuario a "esperando pago"
+        estadosUsuarios[userNumber] = {
+          estado: "esperando pago",
+          plan: "Solo Bot Doxing",
+        };
+      } else if (msg.body === "2") {
+        // Opción 2 seleccionada
+        const qrUrl =
+          "https://firebasestorage.googleapis.com/v0/b/apppagos-1ec3f.appspot.com/o/IMG-20241008-WA0118.jpg?alt=media&token=4de84756-2d22-4445-82e8-793977c6e9c5";
+
+        const media = await MessageMedia.fromUrl(qrUrl);
+        await client.sendMessage(userNumber, media, {
+          caption: `Sigue los siguientes pasos para completar tu compra:
+  
+1. *Realiza el pago:* Escanea el QR que te hemos enviado y efectúa el pago correspondiente.
+2. *Confirma el pago:* Una vez que hayas realizado el pago, por favor envíame una captura de pantalla del comprobante.
+3. *Disfruta del servicio:* Una vez confirmado el pago, estarás en la lista de espera con tu cupo asegurado.`,
+        });
+
+        // Cambiamos el estado del usuario a "esperando pago"
+        estadosUsuarios[userNumber] = {
+          estado: "esperando pago",
+          plan: "Yape FAKE + Bot Doxing",
+        };
+      } else {
+        // Si la respuesta no es válida
+        await msg.reply(
+          "Por favor, responde con el número de la opción que prefieras: 1 o 2."
+        );
+      }
+      return; // Terminamos aquí para no seguir procesando este mensaje
+    }
+    if (estadosUsuarios[userNumber]?.estado === "selecInfo") {
+      if (msg.body === "1") {
+        // Opción 1 seleccionada
+        await chat.sendMessage(`¡Claro! El doxing es una habilidad que te permite encontrar información sobre personas a partir de datos disponibles en internet. Esto incluye detalles como el nombre completo, el DNI, fotos, números telefónicos asociados, su árbol genealógico, antecedentes penales, e incluso su acta de nacimiento. 
+    
+    Por ejemplo, si un miembro de tu familia está recibiendo llamadas de un número desconocido, con el doxing podrías descubrir quién es el titular de ese número.`);
+    
+        // Cambiamos el estado del usuario a "esperando pago"
+        estadosUsuarios[userNumber].estado = "esperando pago";
+    
+      } else if (msg.body === "2") {
+        // Opción 2 seleccionada
+        await chat.sendMessage(`El bot de doxing es una herramienta que facilita la búsqueda de información. Solo necesitas ingresar algunos datos y el bot puede proporcionarte información específica sobre una persona, como el nombre del propietario de un número desconocido, su dirección y otros datos relevantes.
+    
+    Esto puede ser útil al recibir llamadas de números desconocidos o para verificar la identidad de alguien antes de conocerlo. Recuerda usar esta información de manera ética y respetuosa.`);
+    
+        // Cambiamos el estado del usuario a "esperando pago"
+        estadosUsuarios[userNumber].estado = "esperando pago";
+    
+      } else {
+        // Si la respuesta no es válida
+        await msg.reply("Por favor, responde con el número de la opción que prefieras: 1 o 2.");
+      }
+      return; // Terminamos aquí para no seguir procesando este mensaje
+    }
+     else if (msg.body.toLowerCase().includes("reporte") && !chat.isGroup) {
       const lastReportTime = reportes.get(userNumber); // Obtiene la última hora de reporte
 
       // Verifica si puede enviar un nuevo reporte
       if (!lastReportTime || ahora - lastReportTime >= 24 * 60 * 60 * 1000) {
         reportes.set(userNumber, ahora); // Actualiza la hora del último reporte
         await chat.sendMessage(`Hola, envíame las capturas de lo que pasó.`);
-
+        let respondido = false;
         const capturasRecibidas = []; // Almacena las capturas recibidas
         const timeout = setTimeout(async () => {
           if (capturasRecibidas.length === 0) {
@@ -316,9 +411,11 @@ _¡Gracias por confiar en nosotros!_`;
             // Si se recibe texto pero no hay imágenes
             if (msg.body && msg.body.toLowerCase() !== "reporte") {
               clearTimeout(timeout); // Cancela el temporizador
+              respondido = true;
               await chat.sendMessage(
                 `Recibí tu mensaje, pero por favor, envíame las capturas de la estafa para que podamos investigar adecuadamente.`
               );
+              client.off("message", messageListener);
             }
           }
         };
@@ -585,15 +682,16 @@ io.on("connection", (socket) => {
     socket.emit("alert", `El envío de mensajes ha sido ${estadoEnvio}.`);
   });
 
-  socket.on("iniciar-envio", (url, numeroParaContinuar, img) => {
+  socket.on("iniciar-envio", (url, numeroParaContinuar, img, txt) => {
     envioActivo = true;
-    enviarMensajes(url, numeroParaContinuar, img);
+    enviarMensajes(url, numeroParaContinuar, img, txt);
+    console.log(txt);
   });
 
-  socket.on("empezar-de-cero", async (url, img) => {
+  socket.on("empezar-de-cero", async (url, img, text) => {
     envioActivo = true;
     const numeroParaContinuar = "";
-    await enviarMensajes(url, numeroParaContinuar, img);
+    await enviarMensajes(url, numeroParaContinuar, img, text);
   });
 
   socket.on("detener-envio", () => {
