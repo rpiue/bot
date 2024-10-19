@@ -49,7 +49,7 @@ client.on("authenticated", () => {
 });
 
 //Cliente para el Bot
-clientBot.on("qr", (qr) => {
+clientBot.on("qrBot", (qr) => {
   qrcode.generate(qr, { small: true }); // Mostrar QR en la terminal
   sessionActiveBot = false;
   io.emit("qrBot", qr); // Emitir el QR al cliente web
@@ -80,7 +80,7 @@ app.post("/verificar", async (req, res) => {
     const chatId = `51${numero}@c.us`;
 
     // Enviar el mensaje usando whatsapp-web.js
-    clientBot
+    client
       .sendMessage(chatId, mensaje)
       .then((response) => {
         console.log("Mensaje enviado correctamente:", response);
