@@ -9,6 +9,9 @@ const client = new Client({
   // authStrategy: new LocalAuth() // Usar LocalAuth para guardar automáticamente la sesión
 });
 
+const clientBot = new Client({
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -19,36 +22,12 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
-app.post("/verificar", async (req, res) => {
-  const { codigo, numero, nombre } = req.body;
-
-  try {
-    if (!codigo || !numero) {
-      return res.status(400).send("Faltan parámetros: código o número.");
-    }
-
-    const mensaje = `Hola ${nombre}, tu código es *${codigo}*`;
-    const chatId = `51${numero}@c.us`;
-
-    // Enviar el mensaje usando whatsapp-web.js
-    client
-      .sendMessage(chatId, mensaje)
-      .then((response) => {
-        console.log("Mensaje enviado correctamente:", response);
-        return res.status(200).send("Mensaje enviado.");
-      })
-      .catch((error) => {
-        console.error("Error al enviar el mensaje:", error);
-        return res.status(500).send("Error al enviar el mensaje.");
-      });
-  } catch (error) {
-    console.error("Error en el servidor:", error);
-    res.status(500).send("Error interno del servidor.");
-  }
-});
 
 let qrImage;
+let qrImageBot;
 let sessionActive = false;
+
+let sessionActiveBot = false;
 
 client.on("qr", (qr) => {
   qrcode.generate(qr, { small: true }); // Mostrar QR en la terminal
@@ -68,6 +47,55 @@ client.on("authenticated", () => {
   sessionActive = true; // La sesión está activa
   io.emit("sessionStatus", sessionActive);
 });
+
+//Cliente para el Bot
+clientBot.on("qr", (qr) => {
+  qrcode.generate(qr, { small: true }); // Mostrar QR en la terminal
+  sessionActiveBot = false;
+  io.emit("qrBot", qr); // Emitir el QR al cliente web
+  qrImageBot = qr;
+});
+
+clientBot.on("readybot", () => {
+  console.log("Cliente listo para enviar mensajes.");
+  sessionActiveBot = true; // La sesión está activa
+  io.emit("readybot");
+  io.emit("sessionStatusBot", sessionActive); // Notificar a los clientes que la sesión está activa
+});
+
+clientBot.on("authenticatedBot", () => {
+  sessionActiveBot = true; // La sesión está activa
+  io.emit("sessionStatusBot", sessionActive);
+});
+
+app.post("/verificar", async (req, res) => {
+  const { codigo, numero, nombre } = req.body;
+
+  try {
+    if (!codigo || !numero) {
+      return res.status(400).send("Faltan parámetros: código o número.");
+    }
+
+    const mensaje = `Hola ${nombre}, tu código es *${codigo}*`;
+    const chatId = `51${numero}@c.us`;
+
+    // Enviar el mensaje usando whatsapp-web.js
+    clientBot
+      .sendMessage(chatId, mensaje)
+      .then((response) => {
+        console.log("Mensaje enviado correctamente:", response);
+        return res.status(200).send("Mensaje enviado.");
+      })
+      .catch((error) => {
+        console.error("Error al enviar el mensaje:", error);
+        return res.status(500).send("Error al enviar el mensaje.");
+      });
+  } catch (error) {
+    console.error("Error en el servidor:", error);
+    res.status(500).send("Error interno del servidor.");
+  }
+});
+
 
 let envioActivo = false;
 let statuBotGrup = false;
@@ -629,9 +657,19 @@ Responde con el número de la opción para más detalles.`;
 function obtenerRespuesta(opcion) {
   switch (opcion) {
     case "1":
-      return `*Cómo Crear Contactos:*\nSigue este enlace para aprender a crear contactos: https://www.instagram.com/yape.fake/`;
+      return `*Cómo Crear Contactos:*\nSigue este enlace para aprender a crear contactos: https://www.instagram.com/reel/C9qXx8RRDVs/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==`;
     case "2":
-      return `*Cómo funciona el Escáner:*\nAquí puedes ver cómo funciona el escáner: https://www.instagram.com/yape.fake/`;
+      return `*Cómo funciona el Escáner:*\nEl escáner no detecta códigos QR como tal. En los detalles aparece "Escáner QR (Texto)", lo que significa que el escáner necesita una imagen donde se muestre el nombre de la víctima. Específicamente, debe ser una imagen como la que te envié. Si observas, en la parte superior de la imagen aparece el nombre completo de la víctima.
+
+*Para proceder, sigue estos pasos:*
+
+1. Ingresa a "Escanear QR".
+2. Haz clic en "Subir una imagen".
+3. Sube la imagen que te envié.
+
+Si quieres ver en video cómo funciona, ingresa aquí:
+https://www.instagram.com/yape.fake/
+`;
     case "3":
       return `*Planes de Suscripción:*\nLos planes de suscripción te dan beneficios como yapear sin límites y crear contactos sin restricciones. Los planes son mensuales y las actualizaciones son gratis.`;
     case "4":
