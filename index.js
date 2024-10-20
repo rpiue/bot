@@ -228,8 +228,7 @@ async function enviarMensajesBot(e) {
       const planLine = lines.find((line) => line.startsWith("El Plan:"));
 
       const name = nameLine ? nameLine.split(": ")[1] : "Usuario";
-      const plan = planLine ? planLine.split(": ")[1] : "Plan Basico";
-      console.log(plan)
+      const plan = planLine ? planLine.split(":").slice(1).join(":").trim() : "Plan Basico";
       const fechaHora = new Date().toLocaleString();
       mensajesEnviados.push({
         name,
