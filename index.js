@@ -221,7 +221,7 @@ async function enviarMensajesBot(e) {
       fechaHoraAnterior: ahora,
     };
 
-    const planRegex = /Plan (Basico|Medium|Premium) - Yape Fake/i;
+    const planRegex = /Plan (Basico|Medium|Premium) - (BCP Fake|Yape Fake|Interbank Fake)/i;
     if (planRegex.test(msg.body) && !chat.isGroup) {
       const lines = msg.body.split("\n");
       const nameLine = lines.find((line) => line.startsWith("Mi nombre es:"));
