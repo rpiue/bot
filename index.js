@@ -83,7 +83,7 @@ app.post("/verificar", async (req, res) => {
     client
       .sendMessage(chatId, mensaje)
       .then((response) => {
-        console.log("Mensaje enviado correctamente:", response);
+        //console.log("Mensaje enviado correctamente:", response);
         return res.status(200).send("Mensaje enviado.");
       })
       .catch((error) => {
