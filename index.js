@@ -77,13 +77,19 @@ app.post("/verificar", async (req, res) => {
     }
 
     const mensaje = `Hola ${nombre}, tu código es *${codigo}*`;
+    const mensaje2 = `Recuerda que la aplicación es *GRATIS*. No pagues a nadie. Si alguien intenta venderte la aplicación, no lo reclamarle; simplemente repórtalo escribiendo la palabra *reporte*.`;
+    const mensaje3 = `El link de la aplicacion de Yape, BCP estan en el link de mi perfil y las puedes descargar gratuitamente.`;
     const chatId = `51${numero}@c.us`;
 
     // Enviar el mensaje usando whatsapp-web.js
+
     client
       .sendMessage(chatId, mensaje)
       .then((response) => {
-        //console.log("Mensaje enviado correctamente:", response);
+        client.sendMessage(chatId, mensaje2);
+        client.sendMessage(chatId, mensaje3);
+
+        console.log("Mensaje enviado correctamente:");
         return res.status(200).send("Mensaje enviado.");
       })
       .catch((error) => {
