@@ -4,13 +4,16 @@ const http = require("http");
 const socketIo = require("socket.io");
 const axios = require("axios");
 const qrcode = require("qrcode-terminal");
+const {
+  fetchEmailsFromFirestore,
+  findEmailInCache,
+} = require("./datos-firebase");
 
 const client = new Client({
   // authStrategy: new LocalAuth() // Usar LocalAuth para guardar automáticamente la sesión
 });
 
-const clientBot = new Client({
-});
+const clientBot = new Client({});
 
 const app = express();
 const server = http.createServer(app);
@@ -21,7 +24,6 @@ app.use(express.static("public"));
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
-
 
 let qrImage;
 let qrImageBot;
@@ -36,11 +38,13 @@ client.on("qr", (qr) => {
   qrImage = qr;
 });
 
-client.on("ready", () => {
+client.on("ready", async () => {
   console.log("Cliente listo para enviar mensajes.");
   sessionActive = true; // La sesión está activa
   io.emit("ready");
   io.emit("sessionStatus", sessionActive); // Notificar a los clientes que la sesión está activa
+  await fetchEmailsFromFirestore();
+
 });
 
 client.on("authenticated", () => {
@@ -56,11 +60,13 @@ clientBot.on("qrBot", (qr) => {
   qrImageBot = qr;
 });
 
-clientBot.on("readybot", () => {
+clientBot.on("readybot", async () => {
   console.log("Cliente listo para enviar mensajes.");
   sessionActiveBot = true; // La sesión está activa
   io.emit("readybot");
   io.emit("sessionStatusBot", sessionActive); // Notificar a los clientes que la sesión está activa
+  
+
 });
 
 clientBot.on("authenticatedBot", () => {
@@ -79,7 +85,6 @@ app.post("/verificar", async (req, res) => {
     const mensaje = `Hola ${nombre}, tu código es *${codigo}*`;
     const mensaje2 = `Recuerda que la aplicación es *GRATIS*. No pagues a nadie. Si alguien intenta venderte la aplicación, no lo reclamarle; simplemente repórtalo escribiendo la palabra *reporte*.`;
     const mensaje3 = `El link de la aplicacion de Yape, BCP estan en el link de mi perfil y las puedes descargar gratuitamente.`;
-    const mensaje4 = `https://perfil-mt65.onrender.com`;
     const chatId = `51${numero}@c.us`;
 
     // Enviar el mensaje usando whatsapp-web.js
@@ -89,7 +94,6 @@ app.post("/verificar", async (req, res) => {
       .then((response) => {
         client.sendMessage(chatId, mensaje2);
         client.sendMessage(chatId, mensaje3);
-        client.sendMessage(chatId, mensaje4);
 
         console.log("Mensaje enviado correctamente:");
         return res.status(200).send("Mensaje enviado.");
@@ -103,7 +107,6 @@ app.post("/verificar", async (req, res) => {
     res.status(500).send("Error interno del servidor.");
   }
 });
-
 
 let envioActivo = false;
 let statuBotGrup = false;
@@ -229,52 +232,68 @@ async function enviarMensajesBot(e) {
       fechaHoraAnterior: ahora,
     };
 
-    const planRegex = /Plan (Basico|Medium|Premium) - (BCP Fake|Yape Fake|Interbank Fake)/i;
+    const planRegex = /Plan (Basico|Medium|Premium) - Yape Fake/i;
     if (planRegex.test(msg.body) && !chat.isGroup) {
+      if (!msg.body.includes("Mi correo:")) return;
       const lines = msg.body.split("\n");
       const nameLine = lines.find((line) => line.startsWith("Mi nombre es:"));
       const planLine = lines.find((line) => line.startsWith("El Plan:"));
+      const emailLine = lines.find((line) => line.startsWith("Mi correo:"));
+      const email = emailLine ? emailLine.split(": ")[1].trim() : null;
+      if (!email) {
+        await msg.reply("No se detectó un correo válido en tu mensaje.");
+        return;
+      }
+      console.log(`Verificando el correo: ${email}`);
 
-      const name = nameLine ? nameLine.split(": ")[1] : "Usuario";
-      const plan = planLine ? planLine.split(":").slice(1).join(":").trim() : "Plan Basico";
-      const fechaHora = new Date().toLocaleString();
-      mensajesEnviados.push({
-        name,
-        userNumber1,
-        fechaHora,
-      });
+      const exists = findEmailInCache(email);
+      if (exists) {
+        const name = nameLine ? nameLine.split(": ")[1] : "Usuario";
+        const plan = planLine
+          ? planLine.split(":").slice(1).join(":").trim()
+          : "Plan Basico";
+        console.log(lines);
+        console.log(planLine);
+        console.log(name);
+        console.log(plan);
+        const fechaHora = new Date().toLocaleString();
+        mensajesEnviados.push({
+          name,
+          userNumber1,
+          fechaHora,
+        });
 
-      io.emit("messageSent", name, userNumber1);
+        io.emit("messageSent", name, userNumber1);
 
-      let planDetails = "";
+        let planDetails = "";
 
-      switch (plan.toLowerCase()) {
-        case "plan basico":
-          planDetails = `
+        switch (plan.toLowerCase()) {
+          case "plan basico":
+            planDetails = `
 - **Creación de contactos ilimitados:** Puedes generar todos los contactos que necesites sin ninguna restricción. Ideal para un uso básico de nuestra aplicación.
 - **Función de escaneo de texto:** Te ofrecemos la posibilidad de subir imágenes con nombres, y nuestro sistema extraerá automáticamente el texto, facilitando el proceso de creación de nuevos contactos. Esta funcionalidad es especialmente útil cuando tienes listas de contactos en formato de imagen o capturas.`;
-          break;
-        case "plan medium":
-          planDetails = `
+            break;
+          case "plan medium":
+            planDetails = `
 - **Creación de contactos ilimitados:** Al igual que el Plan Básico, podrás crear contactos de forma ilimitada.
 - **Escaneo de texto avanzado:** Nuestra tecnología te permitirá escanear imágenes con nombres, y automáticamente el sistema los convertirá en contactos.
 - **Almacenamiento en la nube:** Todos los contactos que crees estarán respaldados de manera segura en la nube. Esto significa que, si cambias de dispositivo o necesitas reinstalar la aplicación, tus contactos permanecerán intactos. Nunca perderás los datos importantes que hayas almacenado.`;
-          break;
-        case "plan premium":
-          planDetails = `
+            break;
+          case "plan premium":
+            planDetails = `
 - **Creación de contactos ilimitados:** Sin restricciones para crear todos los contactos que necesites.
 - **Escaneo de texto avanzado:** Extrae automáticamente nombres de imágenes que subas, facilitando la gestión de grandes volúmenes de contactos.
 - **Almacenamiento en la nube:** Todos los contactos estarán respaldados en la nube, por lo que no se perderán aunque cambies de dispositivo o desinstales la aplicación.
 - **Notificaciones SMS:** Cada vez que realices un pago a un contacto, la otra persona recibirá un SMS notificando el pago. Esta funcionalidad es perfecta si necesitas llevar un registro o confirmar transferencias de manera automática, mejorando la comunicación y seguridad entre los usuarios.`;
-          break;
-        default:
-          planDetails = "Detalles no disponibles para este plan.";
-      }
+            break;
+          default:
+            planDetails = "Detalles no disponibles para este plan.";
+        }
 
-      try {
-        // Suponiendo que imageUrl es la URL de la imagen que deseas enviar
+        try {
+          // Suponiendo que imageUrl es la URL de la imagen que deseas enviar
 
-        const customMessage = `
+          const customMessage = `
 Hola ${name}, ¡gracias por elegir el ${plan}!
 
 Nos complace informarte que has seleccionado el *${plan}*.
@@ -282,7 +301,7 @@ A continuación, encontrarás los detalles de este plan y lo que incluye:
 
 **Detalles del ${plan}:**${planDetails}`;
 
-        const pasos = `
+          const pasos = `
 **Pasos a seguir:**
 1. *Realiza el pago:* Escanea el QR que te hemos enviado y efectúa el pago correspondiente a tu plan y *en la descripcion agrega tu correo.*
 2. *Confirma el pago:* Una vez que hayas realizado el pago, por favor envíame una captura de pantalla del comprobante para activar tu suscripción.
@@ -292,127 +311,32 @@ Si tienes alguna duda o necesitas asistencia, no dudes en comunicarte conmigo. E
 
 _¡Gracias por confiar en nosotros!_`;
 
-        await chat.sendMessage(customMessage);
-        //await new Promise(resolve => setTimeout(resolve, 3000));
-        setTimeout(async () => {
-          await chat.sendMessage(pasos);
-        }, 3000);
+          await chat.sendMessage(customMessage);
+          //await new Promise(resolve => setTimeout(resolve, 3000));
+          setTimeout(async () => {
+            await chat.sendMessage(pasos);
+          }, 3000);
 
-        if (imageUrl) {
-          const response = await axios.get(imageUrl, {
-            responseType: "arraybuffer",
-          });
-          const imageBase64 = Buffer.from(response.data, "binary").toString(
-            "base64"
-          );
-          const media = new MessageMedia("image/jpeg", imageBase64);
+          if (imageUrl) {
+            const response = await axios.get(imageUrl, {
+              responseType: "arraybuffer",
+            });
+            const imageBase64 = Buffer.from(response.data, "binary").toString(
+              "base64"
+            );
+            const media = new MessageMedia("image/jpeg", imageBase64);
 
-          await chat.sendMessage(media);
+            await chat.sendMessage(media);
+          }
+        } catch (error) {
+          console.error("Error al enviar la imagen:", error);
         }
-      } catch (error) {
-        console.error("Error al enviar la imagen:", error);
+      }else {
+        const responseMessage = "Por favor, envíanos un audio para más información.";
+        await msg.reply(responseMessage);
       }
-    } else if (
-      msg.body.toLowerCase().includes("quiero el bot") &&
-      !chat.isGroup
-    ) {
-      // Guardamos al usuario en estado de selección de servicio
-      estadosUsuarios[userNumber] = { estado: "seleccionando" };
-
-      await msg.reply(`Elige uno de los servicios disponibles:
-  
-1. Solo el bot Doxing - *S/ 15* por un mes sin límites.
-2. Yape FAKE + Bot Doxing - *S/ 35* por un mes sin límites.
-  
-Responde con el número de la opción que prefieras.`);
-      return; // Nos aseguramos de no ejecutar más lógica para este mensaje
-    } else if (msg.body.toLowerCase().includes("info bot") && !chat.isGroup) {
-      // Guardamos al usuario en estado de selección de servicio
-      estadosUsuarios[userNumber] = { estado: "selecInfo" };
-
-      await msg.reply(`Elige una opción:
-  
-1.  ¿Qué es el Doxing?
-2.  ¿Para q sirve el Bot?
-  
-Responde con el número de la opción que prefieras.`);
-      return; // Nos aseguramos de no ejecutar más lógica para este mensaje
     }
-    // Verificar si el usuario está en el estado de "seleccionando"
-    if (estadosUsuarios[userNumber]?.estado === "seleccionando") {
-      if (msg.body === "1") {
-        // Opción 1 seleccionada
-        await chat.sendMessage(`
-*¡Excelente!* Para asegurar tu cupo 
-*(👀 solo nos quedan 14)*, realiza el pago al siguiente *número de Yape:*
-  
-  📞 904339056 - OMAR SOTO
-
-En la descripción del pago escribe: 
-*"Bot vía CodexPE"*.
-  
-Una vez realizado el pago, envíanos una captura para confirmar.
-  
-*¡Gracias por tu confianza!*`);
-
-        // Cambiamos el estado del usuario a "esperando pago"
-        estadosUsuarios[userNumber] = {
-          estado: "esperando pago",
-          plan: "Solo Bot Doxing",
-        };
-      } else if (msg.body === "2") {
-        // Opción 2 seleccionada
-        const qrUrl =
-          "https://firebasestorage.googleapis.com/v0/b/apppagos-1ec3f.appspot.com/o/IMG-20241008-WA0118.jpg?alt=media&token=4de84756-2d22-4445-82e8-793977c6e9c5";
-
-        const media = await MessageMedia.fromUrl(qrUrl);
-        await client.sendMessage(userNumber, media, {
-          caption: `Sigue los siguientes pasos para completar tu compra:
-  
-1. *Realiza el pago:* Escanea el QR que te hemos enviado y efectúa el pago correspondiente.
-2. *Confirma el pago:* Una vez que hayas realizado el pago, por favor envíame una captura de pantalla del comprobante.
-3. *Disfruta del servicio:* Una vez confirmado el pago, estarás en la lista de espera con tu cupo asegurado.`,
-        });
-
-        // Cambiamos el estado del usuario a "esperando pago"
-        estadosUsuarios[userNumber] = {
-          estado: "esperando pago",
-          plan: "Yape FAKE + Bot Doxing",
-        };
-      } else {
-        // Si la respuesta no es válida
-        await msg.reply(
-          "Por favor, responde con el número de la opción que prefieras: 1 o 2."
-        );
-      }
-      return; // Terminamos aquí para no seguir procesando este mensaje
-    }
-    if (estadosUsuarios[userNumber]?.estado === "selecInfo") {
-      if (msg.body === "1") {
-        // Opción 1 seleccionada
-        await chat.sendMessage(`¡Claro! El doxing es una habilidad que te permite encontrar información sobre personas a partir de datos disponibles en internet. Esto incluye detalles como el nombre completo, el DNI, fotos, números telefónicos asociados, su árbol genealógico, antecedentes penales, e incluso su acta de nacimiento. 
-    
-    Por ejemplo, si un miembro de tu familia está recibiendo llamadas de un número desconocido, con el doxing podrías descubrir quién es el titular de ese número.`);
-    
-        // Cambiamos el estado del usuario a "esperando pago"
-        estadosUsuarios[userNumber].estado = "esperando pago";
-    
-      } else if (msg.body === "2") {
-        // Opción 2 seleccionada
-        await chat.sendMessage(`El bot de doxing es una herramienta que facilita la búsqueda de información. Solo necesitas ingresar algunos datos y el bot puede proporcionarte información específica sobre una persona, como el nombre del propietario de un número desconocido, su dirección y otros datos relevantes.
-    
-    Esto puede ser útil al recibir llamadas de números desconocidos o para verificar la identidad de alguien antes de conocerlo. Recuerda usar esta información de manera ética y respetuosa.`);
-    
-        // Cambiamos el estado del usuario a "esperando pago"
-        estadosUsuarios[userNumber].estado = "esperando pago";
-    
-      } else {
-        // Si la respuesta no es válida
-        await msg.reply("Por favor, responde con el número de la opción que prefieras: 1 o 2.");
-      }
-      return; // Terminamos aquí para no seguir procesando este mensaje
-    }
-     else if (msg.body.toLowerCase().includes("reporte") && !chat.isGroup) {
+    if (msg.body.toLowerCase().includes("reporte") && !chat.isGroup) {
       const lastReportTime = reportes.get(userNumber); // Obtiene la última hora de reporte
 
       // Verifica si puede enviar un nuevo reporte
